@@ -37,18 +37,18 @@
       "false_positive_rate": 0.0,
       "total_idle_cost": 1785.6,
       "flagged_resources": [
-        "vm-cs101-student-03",
-        "vm-cs401-cluster-04",
-        "vm-cs101-student-02",
-        "gpu-cs401-inference",
-        "vm-cs401-cluster-01",
-        "vm-cs101-student-04",
-        "nb-cs101-jupyter-02",
         "vm-cs101-student-01",
+        "vm-cs101-student-03",
+        "nb-cs101-jupyter-02",
+        "gpu-cs401-inference",
+        "vm-cs401-cluster-03",
+        "vm-cs101-student-04",
         "vm-cs401-cluster-02",
+        "vm-cs101-student-02",
+        "vm-cs401-cluster-04",
+        "vm-cs401-cluster-01",
         "nb-cs101-jupyter-01",
-        "sto-cs101-submissions",
-        "vm-cs401-cluster-03"
+        "sto-cs101-submissions"
       ],
       "false_positive_resources": []
     },
@@ -56,18 +56,18 @@
       "total_truly_idle": 12,
       "total_truly_active": 24,
       "truly_idle_resources": [
-        "vm-cs101-student-03",
-        "vm-cs401-cluster-04",
-        "vm-cs101-student-02",
-        "gpu-cs401-inference",
-        "vm-cs401-cluster-01",
-        "vm-cs101-student-04",
-        "nb-cs101-jupyter-02",
         "vm-cs101-student-01",
+        "vm-cs101-student-03",
+        "nb-cs101-jupyter-02",
+        "gpu-cs401-inference",
+        "vm-cs401-cluster-03",
+        "vm-cs101-student-04",
         "vm-cs401-cluster-02",
+        "vm-cs101-student-02",
+        "vm-cs401-cluster-04",
+        "vm-cs401-cluster-01",
         "nb-cs101-jupyter-01",
-        "sto-cs101-submissions",
-        "vm-cs401-cluster-03"
+        "sto-cs101-submissions"
       ]
     },
     "improvement": {
@@ -89,7 +89,7 @@
     "prototype_fp_below_5pct": true
   },
   "metadata": {
-    "timestamp": "2026-09-01T13:01:24.778986+00:00",
+    "timestamp": "2026-09-04T08:35:38.722313+00:00",
     "total_resources": 36,
     "seed": 42,
     "idle_duration_days": 7
