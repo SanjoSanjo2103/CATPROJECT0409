@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}{{ resource.resource_id }} — CloudReclaim{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ resource.resource_id }}</h2>
+    <p>
+        <span class="badge badge-{{ resource.status }}">{{ resource.status | replace('_', ' ') }}</span>
+        &nbsp;·&nbsp;
+        <span class="type-icon {{ resource.resource_type }}" style="display:inline-flex; vertical-align:middle;">
+            {% if resource.resource_type == 'vm' %}🖥️{% elif resource.resource_type == 'gpu' %}🎮{% elif resource.resource_type == 'storage' %}💾{% else %}📓{% endif %}
+        </span>
+        {{ resource.resource_type | upper }}
+        &nbsp;·&nbsp;
+        ${{ "%.2f"|format(resource.monthly_cost) }}/month
+    </p>
+</div>
+
+<!-- Info Cards -->
+<div class="grid-3">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Ownership</span>
+        </div>
+        <p style="font-size:1.1rem; font-weight:600; margin-bottom:8px;">
+            {% if resource.owner %}{{ resource.owner.full_name }}{% else %}<span class="badge badge-orphaned">Unassigned</span>{% endif %}
+        </p>
+        {% if resource.course %}
+        <p class="text-sm text-muted">{{ resource.course.code }} — {{ resource.course.name }}</p>
+        <p class="text-sm text-muted">{{ resource.course.semester }}</p>
+        <p class="text-sm mt-4">
+            Course active: 
+            {% if resource.course.is_active %}
+            <span style="color:var(--accent-emerald);">● Yes</span>
+            {% else %}
+            <span style="color:var(--accent-rose);">● Ended {{ resource.course.end_date.strftime('%b %d, %Y') }}</span>
+            {% endif %}
+        </p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Tags</span>
+        </div>
+        {% set tags = resource.get_tags() %}
+        {% for key, value in tags.items() %}
+        <div style="display:inline-block; margin:2px;">
+            <span class="badge" style="background:rgba(59,130,246,0.1); color:var(--accent-blue);">
+                {{ key }}: {{ value }}
+            </span>
+        </div>
+        {% endfor %}
+        {% if not tags %}
+        <p class="text-muted text-sm">No tags assigned</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Lifecycle</span>
+        </div>
+        <p class="text-sm">Created: <strong>{{ resource.created_at.strftime('%b %d, %Y') if resource.created_at else 'Unknown' }}</strong></p>
+        <p class="text-sm mt-4">TTL Expires: <strong>{{ resource.ttl_expires_at.strftime('%b %d, %Y') if resource.ttl_expires_at else 'Not set' }}</strong></p>
+    </div>
+</div>
+
+<!-- Utilization Chart -->
+<div class="card mb-6">
+    <div class="card-header">
+        <span class="card-title">Utilization History (30 Days)</span>
+    </div>
+    <div class="chart-container" style="max-height:400px;">
+        <canvas id="utilizationChart"></canvas>
+    </div>
+</div>
+
+<!-- Reclamation History -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">Reclamation History</span>
+    </div>
+    {% if requests %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Grace Deadline</th>
+                    <th>Response</th>
+                    <th>Actioned By</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requests %}
+                <tr>
+                    <td class="text-sm">{{ req.created_at.strftime('%b %d, %H:%M') if req.created_at else '' }}</td>
+                    <td><span class="badge badge-{{ req.reason }}">{{ req.reason | replace('_', ' ') }}</span></td>
+                    <td><span class="badge badge-{{ req.status }}">{{ req.status | replace('_', ' ') }}</span></td>
+                    <td class="text-sm">{{ req.grace_deadline.strftime('%b %d, %H:%M') if req.grace_deadline else '—' }}</td>
+                    <td class="text-sm">{{ req.response_note or '—' }}</td>
+                    <td class="text-sm">{{ req.actioner.full_name if req.actioner else 'System' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <h3>No reclamation history</h3>
+        <p>This resource has not been flagged for reclamation.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Prepare metric data
+const metrics = {{ metrics | tojson }};
+
+// Aggregate by day
+const dailyData = {};
+metrics.forEach(m => {
+    const day = m.timestamp.split('T')[0];
+    if (!dailyData[day]) {
+        dailyData[day] = { cpu: [], mem: [], net: [], gpu: [] };
+    }
+    dailyData[day].cpu.push(m.cpu_percent);
+    dailyData[day].mem.push(m.memory_percent);
+    dailyData[day].net.push(m.network_bytes);
+    if (m.gpu_percent !== null) dailyData[day].gpu.push(m.gpu_percent);
+});
+
+const days = Object.keys(dailyData).sort();
+const avgCpu = days.map(d => dailyData[d].cpu.reduce((a, b) => a + b, 0) / dailyData[d].cpu.length);
+const avgMem = days.map(d => dailyData[d].mem.reduce((a, b) => a + b, 0) / dailyData[d].mem.length);
+const avgGpu = days.map(d => dailyData[d].gpu.length > 0 
+    ? dailyData[d].gpu.reduce((a, b) => a + b, 0) / dailyData[d].gpu.length 
+    : null);
+
+const hasGpu = avgGpu.some(v => v !== null);
+const datasets = [
+    {
+        label: 'CPU %',
+        data: avgCpu,
+        borderColor: 'rgba(59, 130, 246, 1)',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        fill: true,
+        tension: 0.3,
+    },
+    {
+        label: 'Memory %',
+        data: avgMem,
+        borderColor: 'rgba(139, 92, 246, 1)',
+        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+        fill: true,
+        tension: 0.3,
+    }
+];
+
+if (hasGpu) {
+    datasets.push({
+        label: 'GPU %',
+        data: avgGpu,
+        borderColor: 'rgba(16, 185, 129, 1)',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        fill: true,
+        tension: 0.3,
+    });
+}
+
+const ctx = document.getElementById('utilizationChart').getContext('2d');
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: days.map(d => {
+            const dt = new Date(d);
+            return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }),
+        datasets: datasets
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+            legend: {
+                labels: { color: '#94a3b8', font: { family: 'Inter', size: 12 } }
+            }
+        },
+        scales: {
+            x: {
+                ticks: { color: '#64748b', maxTicksLimit: 15 },
+                grid: { color: 'rgba(255,255,255,0.03)' }
+            },
+            y: {
+                min: 0,
+                max: 100,
+                ticks: { color: '#64748b', callback: v => v + '%' },
+                grid: { color: 'rgba(255,255,255,0.03)' }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — CloudReclaim{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Dashboard</h2>
+    <p>Overview of cloud resource utilization and reclamation status</p>
+    {% if user.role == 'admin' %}
+    <div class="page-header-actions">
+        <form method="POST" action="{{ url_for('admin.trigger_scan') }}" style="display:inline">
+            <button type="submit" class="btn btn-primary">
+                🔍 Run Idle Scan
+            </button>
+        </form>
+        <form method="POST" action="{{ url_for('admin.trigger_grace_processing') }}" style="display:inline">
+            <button type="submit" class="btn btn-ghost">
+                ⏰ Process Grace Periods
+            </button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+
+<!-- KPI Cards -->
+<div class="kpi-grid">
+    <div class="card kpi-card blue">
+        <div class="kpi-icon">🖥️</div>
+        <div class="kpi-value">{{ stats.total_resources }}</div>
+        <div class="kpi-label">Total Resources</div>
+    </div>
+    <div class="card kpi-card emerald">
+        <div class="kpi-icon">✅</div>
+        <div class="kpi-value">{{ stats.active }}</div>
+        <div class="kpi-label">Active Resources</div>
+    </div>
+    <div class="card kpi-card amber">
+        <div class="kpi-icon">💤</div>
+        <div class="kpi-value">{{ stats.idle }}</div>
+        <div class="kpi-label">Idle / Pending Reclaim</div>
+    </div>
+    <div class="card kpi-card rose">
+        <div class="kpi-icon">👻</div>
+        <div class="kpi-value">{{ stats.orphaned }}</div>
+        <div class="kpi-label">Orphaned Resources</div>
+    </div>
+    <div class="card kpi-card purple">
+        <div class="kpi-icon">💰</div>
+        <div class="kpi-value">${{ "%.0f"|format(stats.idle_monthly_cost) }}</div>
+        <div class="kpi-label">Monthly Idle Cost</div>
+    </div>
+    <div class="card kpi-card emerald">
+        <div class="kpi-icon">📉</div>
+        <div class="kpi-value">${{ "%.0f"|format(stats.reclaimed_savings) }}</div>
+        <div class="kpi-label">Monthly Savings (Reclaimed)</div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="grid-2">
+    <!-- Status Breakdown -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Resource Status Breakdown</span>
+        </div>
+        <div class="chart-container">
+            <canvas id="statusChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Cost by Type -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Monthly Cost by Resource Type</span>
+        </div>
+        <div class="chart-container">
+            <canvas id="costChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">Recent Activity</span>
+    </div>
+    {% if recent_logs %}
+    <ul class="activity-feed">
+        {% for log in recent_logs %}
+        <li class="activity-item">
+            <span class="activity-dot {{ log.action }}"></span>
+            <div class="activity-text">
+                <strong>{{ log.action | replace('_', ' ') | title }}</strong>
+                {% if log.resource %}— {{ log.resource.resource_id }}{% endif %}
+                {% if log.actor %}by {{ log.actor.full_name }}{% endif %}
+            </div>
+            <span class="activity-time">
+                {{ log.timestamp.strftime('%b %d, %H:%M') if log.timestamp else '' }}
+            </span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <h3>No recent activity</h3>
+        <p>Run an idle scan to start detecting resources.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Status breakdown donut chart
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Active', 'Idle', 'Orphaned', 'Reclaimed', 'Extended'],
+        datasets: [{
+            data: [
+                {{ stats.active }},
+                {{ stats.idle }},
+                {{ stats.orphaned }},
+                {{ stats.reclaimed }},
+                {{ stats.extended }}
+            ],
+            backgroundColor: [
+                'rgba(16, 185, 129, 0.8)',
+                'rgba(245, 158, 11, 0.8)',
+                'rgba(244, 63, 94, 0.8)',
+                'rgba(100, 116, 139, 0.8)',
+                'rgba(6, 182, 212, 0.8)'
+            ],
+            borderColor: 'rgba(10, 14, 26, 1)',
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: { color: '#94a3b8', font: { family: 'Inter', size: 12 } }
+            }
+        },
+        cutout: '65%'
+    }
+});
+
+// Cost by type bar chart
+const costCtx = document.getElementById('costChart').getContext('2d');
+const costData = {{ cost_by_type | tojson }};
+const typeLabels = Object.keys(costData).map(t => t.toUpperCase());
+const totalCosts = Object.values(costData).map(v => v.total);
+const idleCosts = Object.values(costData).map(v => v.idle);
+
+new Chart(costCtx, {
+    type: 'bar',
+    data: {
+        labels: typeLabels,
+        datasets: [
+            {
+                label: 'Total Cost',
+                data: totalCosts,
+                backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 1,
+                borderRadius: 4
+            },
+            {
+                label: 'Idle Cost',
+                data: idleCosts,
+                backgroundColor: 'rgba(245, 158, 11, 0.6)',
+                borderColor: 'rgba(245, 158, 11, 1)',
+                borderWidth: 1,
+                borderRadius: 4
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                labels: { color: '#94a3b8', font: { family: 'Inter', size: 12 } }
+            }
+        },
+        scales: {
+            x: {
+                ticks: { color: '#64748b' },
+                grid: { color: 'rgba(255,255,255,0.03)' }
+            },
+            y: {
+                ticks: { color: '#64748b', callback: v => '$' + v },
+                grid: { color: 'rgba(255,255,255,0.03)' }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

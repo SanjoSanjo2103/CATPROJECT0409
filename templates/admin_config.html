@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Configuration — CloudReclaim{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>System Configuration</h2>
+    <p>Adjust reclamation rules and thresholds. Changes are audit-logged.</p>
+</div>
+
+<form method="POST" action="{{ url_for('admin.config') }}">
+    <!-- Utilization Thresholds -->
+    <div class="card config-section">
+        <h3>📊 Utilization Thresholds</h3>
+        <p class="text-sm text-muted mb-4">Resources below ALL thresholds for the idle duration are flagged as idle.</p>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="cpu_idle_threshold">CPU Idle Threshold (%)</label>
+                <input type="number" step="0.1" name="cpu_idle_threshold" id="cpu_idle_threshold"
+                       class="form-input" value="{{ rules.cpu_idle_threshold }}">
+                <span class="form-hint">Average CPU below this = idle signal</span>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="memory_idle_threshold">Memory Idle Threshold (%)</label>
+                <input type="number" step="0.1" name="memory_idle_threshold" id="memory_idle_threshold"
+                       class="form-input" value="{{ rules.memory_idle_threshold }}">
+                <span class="form-hint">Average memory below this = idle signal</span>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="network_idle_threshold">Network Idle Threshold (bytes)</label>
+                <input type="number" name="network_idle_threshold" id="network_idle_threshold"
+                       class="form-input" value="{{ rules.network_idle_threshold }}">
+                <span class="form-hint">Total network bytes below this = idle signal</span>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="gpu_idle_threshold">GPU Idle Threshold (%)</label>
+                <input type="number" step="0.1" name="gpu_idle_threshold" id="gpu_idle_threshold"
+                       class="form-input" value="{{ rules.gpu_idle_threshold }}">
+                <span class="form-hint">Average GPU below this = idle signal (GPU only)</span>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="idle_duration_days">Idle Duration (days)</label>
+                <input type="number" name="idle_duration_days" id="idle_duration_days"
+                       class="form-input" value="{{ rules.idle_duration_days }}">
+                <span class="form-hint">Consecutive days below thresholds to be flagged</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grace Periods -->
+    <div class="card config-section">
+        <h3>⏰ Grace Periods & Extensions</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="grace_period_hours">Grace Period (hours)</label>
+                <input type="number" name="grace_period_hours" id="grace_period_hours"
+                       class="form-input" value="{{ rules.grace_period_hours }}">
+                <span class="form-hint">Hours before auto-reclaim if no response</span>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="max_extensions">Maximum Extensions</label>
+                <input type="number" name="max_extensions" id="max_extensions"
+                       class="form-input" value="{{ rules.max_extensions }}">
+                <span class="form-hint">Max times an instructor can extend TTL</span>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="extension_duration_days">Extension Duration (days)</label>
+                <input type="number" name="extension_duration_days" id="extension_duration_days"
+                       class="form-input" value="{{ rules.extension_duration_days }}">
+                <span class="form-hint">Days added per extension</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar Rules -->
+    <div class="card config-section">
+        <h3>📅 Calendar & Semester Rules</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-checkbox">
+                    <input type="checkbox" name="auto_reclaim_after_semester" value="true"
+                           {% if rules.auto_reclaim_after_semester %}checked{% endif %}>
+                    <span>Auto-flag resources when semester ends</span>
+                </label>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="break_period_grace_days">Break Period Extra Grace (days)</label>
+                <input type="number" name="break_period_grace_days" id="break_period_grace_days"
+                       class="form-input" value="{{ rules.break_period_grace_days }}">
+                <span class="form-hint">Extra grace days during university break periods</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Safety -->
+    <div class="card config-section">
+        <h3>🛡️ Safety Settings</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-checkbox">
+                    <input type="checkbox" name="snapshot_before_reclaim" value="true"
+                           {% if rules.snapshot_before_reclaim %}checked{% endif %}>
+                    <span>Snapshot data before reclamation</span>
+                </label>
+            </div>
+            <div class="form-group">
+                <label class="form-checkbox">
+                    <input type="checkbox" name="require_approval_for_gpu" value="true"
+                           {% if rules.require_approval_for_gpu %}checked{% endif %}>
+                    <span>Require admin approval for GPU reclamation</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scan Schedule -->
+    <div class="card config-section">
+        <h3>🔄 Scan Schedule</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="scan_interval_hours">Scan Interval (hours)</label>
+                <input type="number" name="scan_interval_hours" id="scan_interval_hours"
+                       class="form-input" value="{{ rules.scan_interval_hours }}">
+                <span class="form-hint">How often the idle detection scan runs</span>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="padding: 12px 32px; font-size:1rem;">
+        💾 Save Configuration
+    </button>
+</form>
+{% endblock %}

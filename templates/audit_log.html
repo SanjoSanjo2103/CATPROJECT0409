@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Audit Log — CloudReclaim{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Audit Log</h2>
+    <p>Complete audit trail of all system actions and user decisions</p>
+</div>
+
+<div class="card">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Actor</th>
+                    <th>Action</th>
+                    <th>Resource</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs.items %}
+                <tr>
+                    <td class="text-sm font-mono">
+                        {{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp else '' }}
+                    </td>
+                    <td class="text-sm">
+                        {% if log.actor %}
+                        {{ log.actor.full_name }}
+                        <br><span class="text-xs text-muted">{{ log.actor.role }}</span>
+                        {% else %}
+                        <span class="text-muted">System</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ log.action }}">{{ log.action | replace('_', ' ') }}</span>
+                    </td>
+                    <td class="text-sm">
+                        {% if log.resource %}
+                        <a href="{{ url_for('resources.detail', resource_id=log.resource.id) }}">
+                            {{ log.resource.resource_id }}
+                        </a>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-xs" style="max-width:300px; overflow:hidden; text-overflow:ellipsis;">
+                        {% set details = log.get_details() %}
+                        {% if details %}
+                            {% for key, val in details.items() %}
+                            <span style="color:var(--text-muted);">{{ key }}:</span> {{ val }}{% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if logs.pages > 1 %}
+    <div class="pagination">
+        {% if logs.has_prev %}
+        <a href="{{ url_for('admin.audit_log', page=logs.prev_num) }}">← Prev</a>
+        {% endif %}
+        {% for page_num in logs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if page_num %}
+                {% if page_num == logs.page %}
+                <span class="current">{{ page_num }}</span>
+                {% else %}
+                <a href="{{ url_for('admin.audit_log', page=page_num) }}">{{ page_num }}</a>
+                {% endif %}
+            {% else %}
+            <span class="text-muted">…</span>
+            {% endif %}
+        {% endfor %}
+        {% if logs.has_next %}
+        <a href="{{ url_for('admin.audit_log', page=logs.next_num) }}">Next →</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

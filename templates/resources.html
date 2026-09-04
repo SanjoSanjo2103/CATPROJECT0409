@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Resources — CloudReclaim{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Resource Inventory</h2>
+    <p>All cloud resources across courses and semesters</p>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('resources.index') }}" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; width:100%;">
+        <select name="status" class="form-select" onchange="this.form.submit()">
+            <option value="all" {% if current_status == 'all' %}selected{% endif %}>All Statuses</option>
+            {% for s in statuses %}
+            <option value="{{ s }}" {% if current_status == s %}selected{% endif %}>{{ s | replace('_', ' ') | title }}</option>
+            {% endfor %}
+        </select>
+        <select name="type" class="form-select" onchange="this.form.submit()">
+            <option value="all" {% if current_type == 'all' %}selected{% endif %}>All Types</option>
+            {% for t in types %}
+            <option value="{{ t }}" {% if current_type == t %}selected{% endif %}>{{ t | upper }}</option>
+            {% endfor %}
+        </select>
+        <select name="course" class="form-select" onchange="this.form.submit()">
+            <option value="all" {% if current_course == 'all' %}selected{% endif %}>All Courses</option>
+            {% for c in courses %}
+            <option value="{{ c.code }}" {% if current_course == c.code %}selected{% endif %}>{{ c.code }} — {{ c.name }}</option>
+            {% endfor %}
+        </select>
+        <span class="text-sm text-muted" style="margin-left:auto;">{{ resources|length }} resources</span>
+    </form>
+</div>
+
+<!-- Resource Table -->
+<div class="card">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Resource</th>
+                    <th>Type</th>
+                    <th>Course</th>
+                    <th>Owner</th>
+                    <th>Status</th>
+                    <th>Monthly Cost</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in resources %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('resources.detail', resource_id=r.id) }}" style="font-weight:600;">
+                            {{ r.resource_id }}
+                        </a>
+                    </td>
+                    <td>
+                        <span class="type-icon {{ r.resource_type }}">
+                            {% if r.resource_type == 'vm' %}🖥️{% elif r.resource_type == 'gpu' %}🎮{% elif r.resource_type == 'storage' %}💾{% else %}📓{% endif %}
+                        </span>
+                        {{ r.resource_type | upper }}
+                    </td>
+                    <td>
+                        {% if r.course %}
+                        <span>{{ r.course.code }}</span>
+                        <br><span class="text-xs text-muted">{{ r.course.semester }}</span>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if r.owner %}
+                        {{ r.owner.full_name }}
+                        {% else %}
+                        <span class="badge badge-orphaned">Unassigned</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ r.status }}">{{ r.status | replace('_', ' ') }}</span>
+                    </td>
+                    <td class="font-mono">${{ "%.2f"|format(r.monthly_cost) }}</td>
+                    <td class="text-right">
+                        <a href="{{ url_for('resources.detail', resource_id=r.id) }}" class="btn btn-ghost btn-sm">
+                            View
+                        </a>
+                        {% if user.role == 'admin' and r.status != 'reclaimed' %}
+                        <form method="POST" action="{{ url_for('admin.admin_reclaim', resource_id=r.id) }}" style="display:inline" onsubmit="return confirm('Are you sure you want to reclaim this resource?')">
+                            <button type="submit" class="btn btn-danger btn-sm">Reclaim</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not resources %}
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <div class="empty-icon">🖥️</div>
+                            <h3>No resources found</h3>
+                            <p>Try adjusting your filters.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

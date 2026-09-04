@@ -1,0 +1,97 @@
+{
+  "baseline": {
+    "scanned": 36,
+    "flagged_idle": 12,
+    "total_idle_cost": 1785.6,
+    "resources_flagged": 12
+  },
+  "prototype_scan": {
+    "scanned": 36,
+    "flagged_idle": 0,
+    "flagged_orphaned": 5,
+    "flagged_expired": 7,
+    "still_active": 24,
+    "total_idle_cost": 1785.6
+  },
+  "approvals": {
+    "total_pending": 12,
+    "approved": 12,
+    "total_savings": 1785.6
+  },
+  "comparison": {
+    "baseline": {
+      "total_flagged": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 12,
+      "false_positive_rate": 0.0,
+      "total_idle_cost": 0.0,
+      "flagged_resources": [],
+      "false_positive_resources": []
+    },
+    "prototype": {
+      "total_flagged": 12,
+      "true_positives": 12,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "false_positive_rate": 0.0,
+      "total_idle_cost": 1785.6,
+      "flagged_resources": [
+        "vm-cs101-student-03",
+        "vm-cs401-cluster-04",
+        "vm-cs101-student-02",
+        "gpu-cs401-inference",
+        "vm-cs401-cluster-01",
+        "vm-cs101-student-04",
+        "nb-cs101-jupyter-02",
+        "vm-cs101-student-01",
+        "vm-cs401-cluster-02",
+        "nb-cs101-jupyter-01",
+        "sto-cs101-submissions",
+        "vm-cs401-cluster-03"
+      ],
+      "false_positive_resources": []
+    },
+    "ground_truth": {
+      "total_truly_idle": 12,
+      "total_truly_active": 24,
+      "truly_idle_resources": [
+        "vm-cs101-student-03",
+        "vm-cs401-cluster-04",
+        "vm-cs101-student-02",
+        "gpu-cs401-inference",
+        "vm-cs401-cluster-01",
+        "vm-cs101-student-04",
+        "nb-cs101-jupyter-02",
+        "vm-cs101-student-01",
+        "vm-cs401-cluster-02",
+        "nb-cs101-jupyter-01",
+        "sto-cs101-submissions",
+        "vm-cs401-cluster-03"
+      ]
+    },
+    "improvement": {
+      "fp_reduction": 0,
+      "fn_reduction": 12
+    }
+  },
+  "success_metrics": {
+    "total_monthly_cost": 8323.2,
+    "baseline_idle_cost": 1785.6,
+    "cost_eliminated": 1785.6,
+    "elimination_rate_pct": 100.0,
+    "target_elimination_rate_pct": 60.0,
+    "target_met": true,
+    "active_wrongly_deleted": 0,
+    "zero_wrongful_deletion_met": true,
+    "baseline_fp_rate": 0.0,
+    "prototype_fp_rate": 0.0,
+    "prototype_fp_below_5pct": true
+  },
+  "metadata": {
+    "timestamp": "2026-09-01T13:01:24.778986+00:00",
+    "total_resources": 36,
+    "seed": 42,
+    "idle_duration_days": 7
+  }
+}

@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+{% block title %}Evaluation Report — CloudReclaim{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Evaluation Report</h2>
+    <p>Baseline vs. Prototype comparison with measured results and error analysis</p>
+</div>
+
+<!-- Success Metrics -->
+<div class="kpi-grid">
+    <div class="card kpi-card emerald">
+        <div class="kpi-icon">💰</div>
+        <div class="kpi-value">${{ "%.0f"|format(metrics.cost_eliminated) }}</div>
+        <div class="kpi-label">Monthly Cost Eliminated</div>
+    </div>
+    <div class="card kpi-card blue">
+        <div class="kpi-icon">📊</div>
+        <div class="kpi-value">{{ metrics.elimination_rate }}%</div>
+        <div class="kpi-label">Idle Cost Elimination Rate</div>
+    </div>
+    <div class="card kpi-card amber">
+        <div class="kpi-icon">⚠️</div>
+        <div class="kpi-value">{{ metrics.prototype_fp_rate }}%</div>
+        <div class="kpi-label">Prototype False Positive Rate</div>
+    </div>
+    <div class="card kpi-card rose">
+        <div class="kpi-icon">🛡️</div>
+        <div class="kpi-value">{{ metrics.active_wrongly_deleted }}</div>
+        <div class="kpi-label">Active Workloads Deleted (Target: 0)</div>
+    </div>
+</div>
+
+<!-- Comparison Charts -->
+<div class="grid-2">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Detection Accuracy Comparison</span>
+        </div>
+        <div class="chart-container">
+            <canvas id="accuracyChart"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Cost Impact Analysis</span>
+        </div>
+        <div class="chart-container">
+            <canvas id="costImpactChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Comparison -->
+<div class="comparison-grid">
+    <div class="card comparison-card baseline">
+        <h3>📉 Baseline (CPU-Only)</h3>
+        <div class="metric-row">
+            <span class="label">Total Flagged</span>
+            <span class="value neutral">{{ comparison.baseline.total_flagged }}</span>
+        </div>
+        <div class="metric-row">
+            <span class="label">True Positives</span>
+            <span class="value good">{{ comparison.baseline.true_positives }}</span>
+        </div>
+        <div class="metric-row">
+            <span class="label">False Positives</span>
+            <span class="value bad">{{ comparison.baseline.false_positives }}</span>
+        </div>
+        <div class="metric-row">
+            <span class="label">False Negatives</span>
+            <span class="value bad">{{ comparison.baseline.false_negatives }}</span>
+        </div>
+        <div class="metric-row">
+            <span class="label">False Positive Rate</span>
+            <span class="value bad">{{ comparison.baseline.false_positive_rate }}%</span>
+        </div>
+        <div class="metric-row">
+            <span class="label">Total Idle Cost Flagged</span>
+            <span class="value">${{ "%.0f"|format(comparison.baseline.total_idle_cost) }}</span>
+        </div>
+    </div>
+
+    <div class="card comparison-card prototype">
+        <h3>✅ Prototype (CloudReclaim)</h3>
+        <div class="metric-row">
+            <span class="label">Total Flagged</span>
+            <span class="value">{{ comparison.prototype.total_flagged }}</span>
+        </div>
+        <div class="metric-row">
+            <span class="label">True Positives</span>
+            <span class="value good">{{ comparison.prototype.true_positives }}</span>
+        </div>
+        <div class="metric-row">
+            <span class="label">False Positives</span>
+            <span class="value good">{{ comparison.prototype.false_positives }}</span>
+        </div>
+        <div class="metric-row">
+            <span class="label">False Negatives</span>
+            <span class="value">{{ comparison.prototype.false_negatives }}</span>
+        </div>
+        <div class="metric-row">
+            <span class="label">False Positive Rate</span>
+            <span class="value good">{{ comparison.prototype.false_positive_rate }}%</span>
+        </div>
+        <div class="metric-row">
+            <span class="label">Total Idle Cost Flagged</span>
+            <span class="value">${{ "%.0f"|format(comparison.prototype.total_idle_cost) }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Ground Truth -->
+<div class="card mb-6">
+    <div class="card-header">
+        <span class="card-title">Ground Truth (Synthetic Dataset)</span>
+    </div>
+    <div class="metric-row">
+        <span class="label">Total Truly Idle Resources</span>
+        <span class="value">{{ comparison.ground_truth.total_truly_idle }}</span>
+    </div>
+    <div class="metric-row">
+        <span class="label">Total Truly Active Resources</span>
+        <span class="value">{{ comparison.ground_truth.total_truly_active }}</span>
+    </div>
+    <div class="metric-row">
+        <span class="label">Improvement: False Positives Reduced</span>
+        <span class="value good">{{ comparison.improvement.fp_reduction|int }}</span>
+    </div>
+    <div class="metric-row">
+        <span class="label">Improvement: False Negatives Reduced</span>
+        <span class="value good">{{ comparison.improvement.fn_reduction|int }}</span>
+    </div>
+</div>
+
+<!-- Error Analysis -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">Error Analysis & Design Rationale</span>
+    </div>
+    <div style="padding: var(--space-4); font-size: var(--font-sm); color: var(--text-secondary); line-height: 1.8;">
+        <h4 style="color: var(--text-primary); margin-bottom: 12px;">Why does the baseline produce more false positives?</h4>
+        <p>The baseline uses a single metric (CPU < 5%) which doesn't account for:</p>
+        <ul style="padding-left: 20px; margin: 8px 0;">
+            <li><strong>Burst workloads</strong> (e.g., GPU training every 3 days) — low average CPU, but genuinely active</li>
+            <li><strong>Memory-intensive services</strong> — low CPU but high memory utilization</li>
+            <li><strong>Semester context</strong> — resources during active semesters shouldn't be reclaimed aggressively</li>
+        </ul>
+
+        <h4 style="color: var(--text-primary); margin: 20px 0 12px;">Why is the prototype more accurate?</h4>
+        <ul style="padding-left: 20px; margin: 8px 0;">
+            <li><strong>Multi-signal detection</strong>: CPU + Memory + Network + GPU must ALL indicate idle</li>
+            <li><strong>Calendar awareness</strong>: Expired semesters are flagged immediately; breaks get extended grace</li>
+            <li><strong>Burst detection</strong>: Any spike > 50% CPU in the window prevents false flagging</li>
+            <li><strong>Ownership validation</strong>: Orphaned resources are escalated to admin, not silently deleted</li>
+            <li><strong>Final safety check</strong>: Re-check utilization before executing reclamation (race condition guard)</li>
+        </ul>
+
+        <h4 style="color: var(--text-primary); margin: 20px 0 12px;">Primary Evidence of Success</h4>
+        <p>Monthly idle cost eliminated: <strong>${{ "%.0f"|format(metrics.cost_eliminated) }}</strong> without deleting any active workloads (0 false deletions).</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const comparison = {{ comparison | tojson }};
+
+// Accuracy comparison chart
+const accCtx = document.getElementById('accuracyChart').getContext('2d');
+new Chart(accCtx, {
+    type: 'bar',
+    data: {
+        labels: ['True Positives', 'False Positives', 'False Negatives'],
+        datasets: [
+            {
+                label: 'Baseline',
+                data: [
+                    comparison.baseline.true_positives,
+                    comparison.baseline.false_positives,
+                    comparison.baseline.false_negatives
+                ],
+                backgroundColor: 'rgba(245, 158, 11, 0.7)',
+                borderColor: 'rgba(245, 158, 11, 1)',
+                borderWidth: 1,
+                borderRadius: 4,
+            },
+            {
+                label: 'Prototype',
+                data: [
+                    comparison.prototype.true_positives,
+                    comparison.prototype.false_positives,
+                    comparison.prototype.false_negatives
+                ],
+                backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                borderColor: 'rgba(16, 185, 129, 1)',
+                borderWidth: 1,
+                borderRadius: 4,
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: { labels: { color: '#94a3b8', font: { family: 'Inter' } } }
+        },
+        scales: {
+            x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.03)' } },
+            y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.03)' }, beginAtZero: true }
+        }
+    }
+});
+
+// Cost impact chart
+const costCtx = document.getElementById('costImpactChart').getContext('2d');
+new Chart(costCtx, {
+    type: 'bar',
+    data: {
+        labels: ['Baseline Idle Cost', 'Prototype Idle Cost', 'Cost Eliminated'],
+        datasets: [{
+            data: [
+                comparison.baseline.total_idle_cost,
+                comparison.prototype.total_idle_cost,
+                {{ metrics.cost_eliminated }}
+            ],
+            backgroundColor: [
+                'rgba(245, 158, 11, 0.7)',
+                'rgba(59, 130, 246, 0.7)',
+                'rgba(16, 185, 129, 0.7)'
+            ],
+            borderColor: [
+                'rgba(245, 158, 11, 1)',
+                'rgba(59, 130, 246, 1)',
+                'rgba(16, 185, 129, 1)'
+            ],
+            borderWidth: 1,
+            borderRadius: 4,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.03)' } },
+            y: {
+                ticks: { color: '#64748b', callback: v => '$' + v },
+                grid: { color: 'rgba(255,255,255,0.03)' },
+                beginAtZero: true
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

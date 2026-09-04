@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="CloudReclaim — University Cloud Lab Idle Resource Reclamation System">
+    <title>{% block title %}CloudReclaim{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    {% if session.get('user_id') %}
+    <div class="app-layout">
+        <!-- ── Sidebar ── -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">☁️</div>
+                <div class="brand-text">
+                    <h1>CloudReclaim</h1>
+                    <span>Resource Manager</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-label">Overview</div>
+                <a href="{{ url_for('dashboard.index') }}" class="nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+                    <span class="nav-icon">📊</span>
+                    Dashboard
+                </a>
+                <a href="{{ url_for('resources.index') }}" class="nav-link {% if request.endpoint and 'resources' in request.endpoint %}active{% endif %}">
+                    <span class="nav-icon">🖥️</span>
+                    Resources
+                </a>
+
+                <div class="nav-section-label">Workflow</div>
+                <a href="{{ url_for('approval.index') }}" class="nav-link {% if request.endpoint and 'approval' in request.endpoint %}active{% endif %}">
+                    <span class="nav-icon">✅</span>
+                    Approvals
+                    {% if pending_count is defined and pending_count > 0 %}
+                    <span class="nav-badge">{{ pending_count }}</span>
+                    {% endif %}
+                </a>
+                <a href="{{ url_for('reports.index') }}" class="nav-link {% if request.endpoint and 'reports' in request.endpoint %}active{% endif %}">
+                    <span class="nav-icon">📈</span>
+                    Reports
+                </a>
+
+                {% if session.get('user_role') == 'admin' %}
+                <div class="nav-section-label">Administration</div>
+                <a href="{{ url_for('admin.config') }}" class="nav-link {% if request.endpoint == 'admin.config' %}active{% endif %}">
+                    <span class="nav-icon">⚙️</span>
+                    Configuration
+                </a>
+                <a href="{{ url_for('admin.audit_log') }}" class="nav-link {% if request.endpoint == 'admin.audit_log' %}active{% endif %}">
+                    <span class="nav-icon">📋</span>
+                    Audit Log
+                </a>
+                {% endif %}
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-card">
+                    <div class="user-avatar">
+                        {{ session.get('user_name', 'U')[0] }}
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">{{ session.get('user_name', 'User') }}</div>
+                        <div class="user-role">{{ session.get('user_role', 'user') }}</div>
+                    </div>
+                </div>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost btn-sm w-full mt-4" style="justify-content: center;">
+                    Logout
+                </a>
+            </div>
+        </aside>
+
+        <!-- ── Main Content ── -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    {% else %}
+        {% block fullpage %}{% endblock %}
+    {% endif %}
+
+    <!-- ── Flash Messages ── -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-container" id="flash-container">
+        {% for category, message in messages %}
+        <div class="flash-message {{ category }}">
+            {{ message }}
+            <button class="flash-close" onclick="this.parentElement.remove()">×</button>
+        </div>
+        {% endfor %}
+    </div>
+    <script>
+        // Auto-dismiss flash messages after 5 seconds
+        setTimeout(() => {
+            const container = document.getElementById('flash-container');
+            if (container) container.remove();
+        }, 5000);
+    </script>
+    {% endif %}
+    {% endwith %}
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

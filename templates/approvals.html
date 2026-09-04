@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Approvals — CloudReclaim{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Reclamation Approvals</h2>
+    <p>Review and act on pending resource reclamation requests</p>
+</div>
+
+<!-- Pending Requests -->
+{% if pending %}
+<h3 style="margin-bottom:var(--space-4); font-weight:700;">Pending Requests ({{ pending|length }})</h3>
+{% for req in pending %}
+<div class="card approval-card">
+    <div class="resource-name">
+        <a href="{{ url_for('resources.detail', resource_id=req.resource.id) }}">{{ req.resource.resource_id }}</a>
+    </div>
+    <div class="resource-meta">
+        <span>
+            <span class="type-icon {{ req.resource.resource_type }}" style="width:24px; height:24px; font-size:0.8rem;">
+                {% if req.resource.resource_type == 'vm' %}🖥️{% elif req.resource.resource_type == 'gpu' %}🎮{% elif req.resource.resource_type == 'storage' %}💾{% else %}📓{% endif %}
+            </span>
+            {{ req.resource.resource_type | upper }}
+        </span>
+        <span>💰 ${{ "%.2f"|format(req.resource.monthly_cost) }}/mo</span>
+        <span>📅 {{ req.reason | replace('_', ' ') | title }}</span>
+        <span>⏰ Deadline: {{ req.grace_deadline.strftime('%b %d, %H:%M') if req.grace_deadline else 'N/A' }}</span>
+        {% if req.resource.course %}
+        <span>📚 {{ req.resource.course.code }} ({{ req.resource.course.semester }})</span>
+        {% endif %}
+    </div>
+    <div class="approval-actions">
+        <form method="POST" action="{{ url_for('approval.approve', request_id=req.id) }}">
+            <input type="hidden" name="note" value="">
+            <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Approve reclamation of {{ req.resource.resource_id }}? A snapshot will be taken first.')">
+                ✅ Approve Reclaim
+            </button>
+        </form>
+        <form method="POST" action="{{ url_for('approval.extend', request_id=req.id) }}">
+            <input type="hidden" name="note" value="Extended — still in use">
+            <button type="submit" class="btn btn-warning btn-sm">
+                🔄 Extend TTL
+            </button>
+        </form>
+        <form method="POST" action="{{ url_for('approval.reject', request_id=req.id) }}">
+            <input type="hidden" name="note" value="Resource is actively needed">
+            <button type="submit" class="btn btn-ghost btn-sm">
+                ❌ Reject
+            </button>
+        </form>
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-icon">✅</div>
+        <h3>No pending requests</h3>
+        <p>All reclamation requests have been addressed. Great job!</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- History -->
+{% if history %}
+<h3 style="margin-top:var(--space-8); margin-bottom:var(--space-4); font-weight:700;">Recent History</h3>
+<div class="card">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Resource</th>
+                    <th>Reason</th>
+                    <th>Result</th>
+                    <th>Date</th>
+                    <th>Note</th>
+                    <th>By</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in history %}
+                <tr>
+                    <td>
+                        {% if req.resource %}
+                        <a href="{{ url_for('resources.detail', resource_id=req.resource.id) }}">{{ req.resource.resource_id }}</a>
+                        {% else %}
+                        <span class="text-muted">Deleted</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="badge badge-{{ req.reason }}">{{ req.reason | replace('_', ' ') }}</span></td>
+                    <td><span class="badge badge-{{ req.status }}">{{ req.status | replace('_', ' ') }}</span></td>
+                    <td class="text-sm">{{ req.responded_at.strftime('%b %d, %H:%M') if req.responded_at else req.created_at.strftime('%b %d, %H:%M') if req.created_at else '' }}</td>
+                    <td class="text-sm">{{ req.response_note or '—' }}</td>
+                    <td class="text-sm">{{ req.actioner.full_name if req.actioner else 'System' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
