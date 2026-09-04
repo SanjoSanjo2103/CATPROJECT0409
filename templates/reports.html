@@ -140,7 +140,7 @@
     </div>
     <div style="padding: var(--space-4); font-size: var(--font-sm); color: var(--text-secondary); line-height: 1.8;">
         <h4 style="color: var(--text-primary); margin-bottom: 12px;">Why does the baseline produce more false positives?</h4>
-        <p>The baseline uses a single metric (CPU < 5%) which doesn't account for:</p>
+        <p>The baseline uses a single metric (CPU &lt; 5%) which doesn't account for:</p>
         <ul style="padding-left: 20px; margin: 8px 0;">
             <li><strong>Burst workloads</strong> (e.g., GPU training every 3 days) — low average CPU, but genuinely active</li>
             <li><strong>Memory-intensive services</strong> — low CPU but high memory utilization</li>
@@ -151,7 +151,7 @@
         <ul style="padding-left: 20px; margin: 8px 0;">
             <li><strong>Multi-signal detection</strong>: CPU + Memory + Network + GPU must ALL indicate idle</li>
             <li><strong>Calendar awareness</strong>: Expired semesters are flagged immediately; breaks get extended grace</li>
-            <li><strong>Burst detection</strong>: Any spike > 50% CPU in the window prevents false flagging</li>
+            <li><strong>Burst detection</strong>: Any spike &gt; 50% CPU in the window prevents false flagging</li>
             <li><strong>Ownership validation</strong>: Orphaned resources are escalated to admin, not silently deleted</li>
             <li><strong>Final safety check</strong>: Re-check utilization before executing reclamation (race condition guard)</li>
         </ul>
@@ -163,8 +163,15 @@
 {% endblock %}
 
 {% block scripts %}
+<script type="application/json" id="report-comparison-data">
+{{ comparison | tojson }}
+</script>
+<script type="application/json" id="report-metrics-data">
+{{ metrics | tojson }}
+</script>
 <script>
-const comparison = {{ comparison | tojson }};
+const comparison = JSON.parse(document.getElementById('report-comparison-data').textContent);
+const reportMetrics = JSON.parse(document.getElementById('report-metrics-data').textContent);
 
 // Accuracy comparison chart
 const accCtx = document.getElementById('accuracyChart').getContext('2d');
@@ -222,7 +229,7 @@ new Chart(costCtx, {
             data: [
                 comparison.baseline.total_idle_cost,
                 comparison.prototype.total_idle_cost,
-                {{ metrics.cost_eliminated }}
+                reportMetrics.cost_eliminated
             ],
             backgroundColor: [
                 'rgba(245, 158, 11, 0.7)',

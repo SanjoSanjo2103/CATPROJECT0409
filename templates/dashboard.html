@@ -111,8 +111,21 @@
 {% endblock %}
 
 {% block scripts %}
+<script type="application/json" id="dashboard-stats">
+{
+    "active": {{ stats.active }},
+    "idle": {{ stats.idle }},
+    "orphaned": {{ stats.orphaned }},
+    "reclaimed": {{ stats.reclaimed }},
+    "extended": {{ stats.extended }}
+}
+</script>
+<script type="application/json" id="cost-by-type-data">
+{{ cost_by_type | tojson }}
+</script>
 <script>
-// Status breakdown donut chart
+// Status breakdown doughnut chart
+const statsData = JSON.parse(document.getElementById('dashboard-stats').textContent);
 const statusCtx = document.getElementById('statusChart').getContext('2d');
 new Chart(statusCtx, {
     type: 'doughnut',
@@ -120,11 +133,11 @@ new Chart(statusCtx, {
         labels: ['Active', 'Idle', 'Orphaned', 'Reclaimed', 'Extended'],
         datasets: [{
             data: [
-                {{ stats.active }},
-                {{ stats.idle }},
-                {{ stats.orphaned }},
-                {{ stats.reclaimed }},
-                {{ stats.extended }}
+                statsData.active,
+                statsData.idle,
+                statsData.orphaned,
+                statsData.reclaimed,
+                statsData.extended
             ],
             backgroundColor: [
                 'rgba(16, 185, 129, 0.8)',
@@ -152,7 +165,7 @@ new Chart(statusCtx, {
 
 // Cost by type bar chart
 const costCtx = document.getElementById('costChart').getContext('2d');
-const costData = {{ cost_by_type | tojson }};
+const costData = JSON.parse(document.getElementById('cost-by-type-data').textContent);
 const typeLabels = Object.keys(costData).map(t => t.toUpperCase());
 const totalCosts = Object.values(costData).map(v => v.total);
 const idleCosts = Object.values(costData).map(v => v.idle);
