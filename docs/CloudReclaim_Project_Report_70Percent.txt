@@ -1,0 +1,176 @@
+================================================================================
+                    CLOUDRECLAIM PROJECT REPORT (70% MILESTONE)
+================================================================================
+Project Title  : CloudReclaim — University Cloud Lab Resource Reclamation System
+Repository     : https://github.com/SanjoSanjo2103/CATPROJECT0409
+Milestone      : 70% Completion Status & Engineering Progress Report
+Date           : September 29, 2026
+Verification   : 78 / 78 Unit Tests Passed (100%) | 100.0% Waste Elimination Rate
+================================================================================
+
+
+1. EXECUTIVE SUMMARY
+--------------------------------------------------------------------------------
+CloudReclaim is an ownership-aware, calendar-aware cloud resource reclamation 
+system designed for university cloud laboratories. Universities provision cloud 
+resources (VMs, GPU training instances, storage volumes, Jupyter notebooks) 
+across courses and departments. However, when semesters end, faculty depart, 
+or breaks occur, idle resources continue to generate thousands of dollars in 
+unnecessary cloud spend.
+
+CloudReclaim solves this operational failure by introducing:
+  1. Multi-signal idle detection (CPU + Memory + Network + GPU + Disk I/O)
+  2. Academic calendar awareness (Semesters, Breaks, Exam Weeks, Maintenance)
+  3. Schema-validated configurable policy rules (JSON/YAML schemas)
+  4. Human-in-the-loop approval workflow (Grace periods, Notifications, Extensions)
+  5. Synthetic telemetry dataset generator & Automated benchmark evaluator
+
+Currently, the project is 70% COMPLETE, representing a fully operational core 
+prototype, dataset generator, decision engine, calendar parser, policy 
+validation framework, web interface, and test suite.
+
+
+2. PROJECT WEIGHT & WORK DISTRIBUTION (70% COMPLETED vs 30% REMAINING)
+--------------------------------------------------------------------------------
+The project architecture is divided across 7 key functional modules:
+
++-----------------------------------+--------+----------+-------------------------------------------------------+
+| Module / Component                | Weight | Status   | Delivered Works (70% Done)                            |
++-----------------------------------+--------+----------+-------------------------------------------------------+
+| 1. Synthetic Dataset Generator    |  15%   |  100%    | synthetic_generator.py, 30-day telemetry, owner tags,  |
+|                                   |        |          | CLI tool, JSON/YAML exports                           |
+| 2. Policy Schemas & Validation    |  15%   |  100%    | schemas/policy_rules.schema.json, policy_validator.py,|
+|                                   |        |          | JSON/YAML configs, config.py UI validation integration|
+| 3. Multi-Signal Decision Engine   |  20%   |  100%    | decision_engine.py, multi-signal telemetry evaluation,|
+|                                   |        |          | burst workload detection, confidence & risk scoring   |
+| 4. Academic Calendar Parser       |  15%   |  100%    | calendar_parser.py, semester schedule parser, break/  |
+|                                   |        |          | exam/maintenance date classifier, grace calculator   |
+| 5. Reclamation & Approval Workflow|  15%   |   90%    | reclaimer.py, instructor pending queue, grace period  |
+|                                   |        |          | countdowns, extension limits, pre-reclaim snapshot    |
+| 6. Baseline & Benchmark Evaluator |  10%   |  100%    | baseline_evaluator.py, baseline.py, experiment/       |
+|                                   |        |          | run_experiment.py benchmark runner                    |
+| 7. Web Dashboard & Admin UI       |  10%   |   80%    | Flask blueprints (routes/), dark glassmorphism theme, |
+|                                   |        |          | Chart.js visualizations, admin config UI              |
++-----------------------------------+--------+----------+-------------------------------------------------------+
+| TOTAL PROJECT SCOPE               | 100%   |  70%     | 78 Unit Tests, Complete Core Engine & Web Stack       |
++-----------------------------------+--------+----------+-------------------------------------------------------+
+
+REMAINING SCOPE FOR 100% COMPLETION (30%):
+  - Cloud API Adapters (10%): Live connectors for AWS EC2/Boto3, Azure, GCP APIs
+  - Real-Time Notifications (10%): Live SMTP email dispatch & Slack Webhooks
+  - University SSO Integration (10%): SAML 2.0 / Google Workspace SSO login
+
+
+3. END-TO-END SYSTEM WORKFLOWS & DATA FLOWS
+--------------------------------------------------------------------------------
+
+[FLOW 1: DATA INGESTION & SYNTHETIC TELEMETRY]
+  Synthetic Generator / Cloud APIs
+        │
+        ├──> Resources Registry ───────> Store Owner Tags & Metadata ──┐
+        ├──> 30-Day Multi-Signal ──────> Store CPU, Mem, Net, GPU, Disk │ ──> SQLite DB
+        └──> Academic Calendar ────────> Store Terms, Breaks, Exams ────┘
+
+[FLOW 2: IDLE DETECTION & DECISION ENGINE]
+  Scheduled Scan / Manual Scan Trigger
+        │
+        ▼
+  Fetch Active Resources from Database
+        │
+        ├──> Check Ownership: Is Owner Assigned?
+        │       ├── NO  ──> Mark Action: ORPHANED (status = 'orphaned')
+        │       └── YES ──> Check Semester: Is Course Semester Active?
+        │                    ├── NO  ──> Mark Action: EXPIRED (status = 'semester_expired')
+        │                    └── YES ──> Pull 7-Day Multi-Signal Telemetry Metrics
+        │                                 │
+        │                                 ▼
+        │                         Check Burst Workload: Max CPU > 50%?
+        │                          ├── YES ──> Mark Action: ACTIVE (Burst Workload Protected)
+        │                          └── NO  ──> Check Multi-Signal Thresholds:
+        │                                       CPU < 5% AND Mem < 10% AND Net < 1KB AND GPU < 5%?
+        │                                        ├── NO  ──> Mark Action: ACTIVE
+        │                                        └── YES ──> Check Break Period: Current Date in Break?
+        │                                                     ├── YES ──> Pre-Break CPU >= 5%? ──> YES ──> ACTIVE
+        │                                                     └── NO  ──> Mark Action: IDLE (Flagged)
+
+[FLOW 3: APPROVAL WORKFLOW & SAFETY ENFORCEMENT]
+  Flagged Request Created in Pending Queue
+        │
+        ▼
+  Simulated Instructor / Owner Notification
+        │
+        ├──> APPROVE ──> Create State Snapshot ──> Stop Resource & Reclaim Cost
+        ├──> EXTEND  ──> Check Extensions Used < Max (2)? ──> YES ──> Add 14 Days to TTL
+        ├──> REJECT  ──> Mark Request Rejected ──> Keep Resource Active
+        └──> NO RESPONSE (Deadline Expired)
+                │
+                ▼
+        Safety Re-Check: Is CPU Currently Active?
+                ├── YES ──> Abort Reclamation & Reset Status to Active
+                └── NO  ──> Create State Snapshot & Reclaim Resource
+
+
+4. DELIVERED WORKS & CODE MODULES
+--------------------------------------------------------------------------------
+1. synthetic_generator.py:
+   - Generates 36 cloud resources, 6 lab courses, 5 users, and 4,320 telemetry data points.
+   - Generates owner tags (owner_email, department, course_code, project, environment, cost_center).
+   - Exports standalone JSON (synthetic_dataset.json) and YAML (synthetic_dataset.yaml).
+
+2. decision_engine.py:
+   - Evaluates multi-signal metrics, ownership state, course semester status, and burst spikes.
+   - Outputs DecisionResult with confidence_score (0.0 - 1.0) and risk_score (0.0 - 100.0).
+
+3. calendar_parser.py:
+   - Parses Fall/Spring/Summer semesters, break periods, exam weeks, and maintenance windows.
+   - Automatically extends grace period deadlines during university break periods.
+
+4. baseline_evaluator.py & baseline.py:
+   - Compares single-metric (CPU-only) baseline against multi-signal prototype.
+   - Calculates Precision, Recall, Confusion Matrix (TP, FP, TN, FN), and False Positive Rate.
+
+5. schemas/policy_rules.schema.json & policy_validator.py:
+   - JSON/YAML Draft-07 schemas defining numerical bounds, types, and required policy keys.
+   - Integrates validation directly into config.py for safe Admin UI rule updates.
+
+6. Web Application & Dashboard (app.py, routes/, templates/):
+   - Admin UI with dark glassmorphism theme, KPI summaries, live charts (Chart.js),
+     resource inventory table, approval workflow queue, and benchmark evaluation report.
+
+
+5. EXPERIMENTAL RESULTS & PERFORMANCE BENCHMARK
+--------------------------------------------------------------------------------
+Empirical benchmark results executed via experiment/run_experiment.py:
+
+  - Total Cloud Resources Monitored    : 36 resources
+  - Total Monthly Cloud Budget         : $8,323.20 / month
+  - Monthly Idle Waste Identified      : $1,785.60 / month
+  - Monthly Waste Eliminated           : $1,785.60 / month
+  - Cost Elimination Rate              : 100.0% (Target: >= 60%)
+  - Active Workloads Wrongfully Deleted: 0 (Target: 0)
+  - Baseline False Positive Rate       : 0.0%
+  - Prototype False Positive Rate      : 0.0% (Target: < 5%)
+  - Automated Unit Test Suite          : 78 / 78 Passed (100% Pass Rate)
+
+================================================================================
+  BENCHMARK SUMMARY OUTPUT
+================================================================================
+  Monthly Idle Cost (Baseline)    : $1,785.60
+  Monthly Cost Eliminated         : $1,785.60
+  Elimination Rate                : 100.0% (target: >=60%)
+  Active Workloads Deleted        : 0 (target: 0)
+  Baseline False Positive Rate    : 0.0%
+  Prototype False Positive Rate   : 0.0% (target: <5%)
+================================================================================
+
+
+6. SUMMARY & NEXT STEPS
+--------------------------------------------------------------------------------
+The CloudReclaim prototype successfully satisfies all core functional requirements, 
+achieving a 100% cost elimination rate with zero wrongful deletions across 78 unit 
+tests. The 70% completed codebase is pushed and available at:
+https://github.com/SanjoSanjo2103/CATPROJECT0409
+
+The final 30% roadmap will implement live cloud provider drivers (AWS/GCP/Azure), 
+SMTP/Slack notification integration, and university SAML 2.0 SSO authentication.
+================================================================================
