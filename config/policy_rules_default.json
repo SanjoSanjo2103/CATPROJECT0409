@@ -1,0 +1,19 @@
+{
+  "cpu_idle_threshold": 5.0,
+  "memory_idle_threshold": 10.0,
+  "network_idle_threshold": 1024,
+  "gpu_idle_threshold": 5.0,
+  "idle_duration_days": 7,
+  "grace_period_hours": 72,
+  "max_extensions": 2,
+  "extension_duration_days": 14,
+  "auto_reclaim_after_semester": true,
+  "break_period_grace_days": 7,
+  "snapshot_before_reclaim": true,
+  "require_approval_for_gpu": true,
+  "scan_interval_hours": 24,
+  "cost_per_hour_vm": 0.10,
+  "cost_per_hour_gpu": 1.50,
+  "cost_per_hour_storage": 0.02,
+  "cost_per_hour_notebook": 0.08
+}

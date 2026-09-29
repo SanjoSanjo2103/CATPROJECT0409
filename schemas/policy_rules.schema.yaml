@@ -1,0 +1,90 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: "CloudReclaimPolicyRules"
+description: "YAML representation of JSON schema definition for CloudReclaim policy rules."
+type: "object"
+properties:
+  cpu_idle_threshold:
+    type: "number"
+    minimum: 0.0
+    maximum: 100.0
+    description: "Average CPU utilization percentage below which resource is considered idle signal."
+  memory_idle_threshold:
+    type: "number"
+    minimum: 0.0
+    maximum: 100.0
+    description: "Average memory utilization percentage below which resource is considered idle signal."
+  network_idle_threshold:
+    type: "number"
+    minimum: 0
+    description: "Total network throughput in bytes per window below which resource is considered idle signal."
+  gpu_idle_threshold:
+    type: "number"
+    minimum: 0.0
+    maximum: 100.0
+    description: "Average GPU utilization percentage below which GPU resource is considered idle signal."
+  idle_duration_days:
+    type: "integer"
+    minimum: 1
+    maximum: 365
+    description: "Number of consecutive days metrics must remain below threshold to flag resource as idle."
+  grace_period_hours:
+    type: "integer"
+    minimum: 1
+    maximum: 720
+    description: "Grace period window in hours given to resource owner before auto-reclamation."
+  max_extensions:
+    type: "integer"
+    minimum: 0
+    maximum: 10
+    description: "Maximum number of extensions allowed for a single reclamation request."
+  extension_duration_days:
+    type: "integer"
+    minimum: 1
+    maximum: 90
+    description: "Duration in days granted for each approved extension."
+  auto_reclaim_after_semester:
+    type: "boolean"
+    description: "Automatically flag resources for reclamation when their associated course semester ends."
+  break_period_grace_days:
+    type: "integer"
+    minimum: 0
+    maximum: 30
+    description: "Additional grace days granted when reclamation deadline falls during break or maintenance periods."
+  snapshot_before_reclaim:
+    type: "boolean"
+    description: "Create state snapshot/backup before shutting down or deleting resources."
+  require_approval_for_gpu:
+    type: "boolean"
+    description: "Require manual admin/instructor approval before reclaiming GPU resources."
+  scan_interval_hours:
+    type: "integer"
+    minimum: 1
+    maximum: 168
+    description: "Frequency in hours of scheduled background scanner runs."
+  cost_per_hour_vm:
+    type: "number"
+    minimum: 0.0
+  cost_per_hour_gpu:
+    type: "number"
+    minimum: 0.0
+  cost_per_hour_storage:
+    type: "number"
+    minimum: 0.0
+  cost_per_hour_notebook:
+    type: "number"
+    minimum: 0.0
+required:
+  - cpu_idle_threshold
+  - memory_idle_threshold
+  - network_idle_threshold
+  - gpu_idle_threshold
+  - idle_duration_days
+  - grace_period_hours
+  - max_extensions
+  - extension_duration_days
+  - auto_reclaim_after_semester
+  - break_period_grace_days
+  - snapshot_before_reclaim
+  - require_approval_for_gpu
+  - scan_interval_hours
+additionalProperties: true

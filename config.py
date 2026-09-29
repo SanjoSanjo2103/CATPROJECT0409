@@ -52,14 +52,34 @@ def get_rules():
     return dict(RECLAMATION_RULES)
 
 
+def validate_rules(rules=None):
+    """
+    Validate policy rules against the JSON schema definition.
+    Returns (is_valid, errors).
+    """
+    from policy_validator import validate_policy_rules
+    target_rules = rules if rules is not None else RECLAMATION_RULES
+    return validate_policy_rules(target_rules)
+
+
 def update_rule(key, value):
-    """Update a single rule. Returns True if the key exists."""
+    """Update a single rule. Returns True if the key exists and resulting rules pass validation."""
     if key in RECLAMATION_RULES:
         # Type-cast to match original type
         original_type = type(RECLAMATION_RULES[key])
         if original_type == bool:
-            RECLAMATION_RULES[key] = str(value).lower() in ('true', '1', 'yes')
+            new_val = str(value).lower() in ('true', '1', 'yes')
         else:
-            RECLAMATION_RULES[key] = original_type(value)
-        return True
+            new_val = original_type(value)
+            
+        temp_rules = dict(RECLAMATION_RULES)
+        temp_rules[key] = new_val
+        is_valid, errors = validate_rules(temp_rules)
+        if is_valid:
+            RECLAMATION_RULES[key] = new_val
+            return True
+        else:
+            print(f"[CONFIG WARNING] Rule update for {key}={value} failed schema validation: {errors}")
+            return False
     return False
+

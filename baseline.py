@@ -75,8 +75,10 @@ def run_baseline_scan():
 def compare_with_prototype(prototype_results):
     """
     Compare baseline results with prototype results to quantify improvement.
-    Returns a comparison dict.
+    Returns a comparison dict using the BaselineEvaluator module.
     """
+    from baseline_evaluator import BaselineEvaluator
+
     baseline = run_baseline_scan()
 
     baseline_flagged_ids = {r['resource_id'] for r in baseline['resources_flagged']}
@@ -90,11 +92,12 @@ def compare_with_prototype(prototype_results):
         proto_flagged_ids.add(r.resource_id)
 
     # Determine ground truth (from synthetic data patterns)
-    # Resources that are ACTUALLY idle (expired courses + orphaned + genuinely idle)
     truly_idle_ids = set()
     truly_active_ids = set()
 
     all_resources = Resource.query.all()
+    resource_costs = {r.resource_id: r.monthly_cost for r in all_resources}
+
     for r in all_resources:
         course = r.course
         if r.owner_id is None:
@@ -104,7 +107,6 @@ def compare_with_prototype(prototype_results):
         elif 'ds401' in r.resource_id and r.resource_type == 'gpu':
             truly_active_ids.add(r.resource_id)  # burst GPU = truly active
         else:
-            # Check if avg utilization indicates active
             now = datetime.now(timezone.utc)
             lookback = now - timedelta(days=7)
             metrics = UtilizationMetric.query.filter(
@@ -118,44 +120,47 @@ def compare_with_prototype(prototype_results):
                 else:
                     truly_idle_ids.add(r.resource_id)
 
-    # Baseline false positives: flagged as idle but truly active
+    evaluator = BaselineEvaluator()
+    report = evaluator.evaluate(
+        all_resource_ids=[r.resource_id for r in all_resources],
+        resource_costs=resource_costs,
+        baseline_flagged_ids=baseline_flagged_ids,
+        prototype_flagged_ids=proto_flagged_ids,
+        ground_truth_idle_ids=truly_idle_ids,
+    )
+
     baseline_fp = baseline_flagged_ids & truly_active_ids
-    baseline_fn = truly_idle_ids - baseline_flagged_ids
-
-    # Prototype false positives
     proto_fp = proto_flagged_ids & truly_active_ids
-    proto_fn = truly_idle_ids - proto_flagged_ids
 
-    comparison = {
+    return {
         'baseline': {
-            'total_flagged': len(baseline_flagged_ids),
-            'true_positives': len(baseline_flagged_ids & truly_idle_ids),
-            'false_positives': len(baseline_fp),
-            'false_negatives': len(baseline_fn),
-            'false_positive_rate': round(len(baseline_fp) / max(len(baseline_flagged_ids), 1) * 100, 1),
+            'total_flagged': report.baseline_flagged,
+            'true_positives': report.baseline_tp,
+            'false_positives': report.baseline_fp,
+            'false_negatives': report.baseline_fn,
+            'false_positive_rate': round(report.baseline_fp_rate, 1),
             'total_idle_cost': baseline['total_idle_cost'],
             'flagged_resources': list(baseline_flagged_ids),
             'false_positive_resources': list(baseline_fp),
         },
         'prototype': {
-            'total_flagged': len(proto_flagged_ids),
-            'true_positives': len(proto_flagged_ids & truly_idle_ids),
-            'false_positives': len(proto_fp),
-            'false_negatives': len(proto_fn),
-            'false_positive_rate': round(len(proto_fp) / max(len(proto_flagged_ids), 1) * 100, 1),
+            'total_flagged': report.prototype_flagged,
+            'true_positives': report.prototype_tp,
+            'false_positives': report.prototype_fp,
+            'false_negatives': report.prototype_fn,
+            'false_positive_rate': round(report.prototype_fp_rate, 1),
             'total_idle_cost': sum(r.monthly_cost for r in proto_resources),
             'flagged_resources': list(proto_flagged_ids),
             'false_positive_resources': list(proto_fp),
         },
         'ground_truth': {
-            'total_truly_idle': len(truly_idle_ids),
-            'total_truly_active': len(truly_active_ids),
+            'total_truly_idle': report.ground_truth_idle_count,
+            'total_truly_active': report.ground_truth_active_count,
             'truly_idle_resources': list(truly_idle_ids),
         },
         'improvement': {
-            'fp_reduction': round(len(baseline_fp) - len(proto_fp), 0),
-            'fn_reduction': round(len(baseline_fn) - len(proto_fn), 0),
+            'fp_reduction': report.fp_reduction,
+            'fn_reduction': report.fn_reduction,
         }
     }
 
-    return comparison
